@@ -1,0 +1,442 @@
+// Prisma schema for Sanches Coaching Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User roles
+enum UserRole {
+  ADMIN
+  CLIENT
+}
+
+// Session types
+enum SessionType {
+  ONE_TO_ONE
+  SMALL_GROUP
+  ASSESSMENT
+  CAMP
+}
+
+// Booking status
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+// Payment status
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+// Package type
+enum PackageType {
+  SIX_WEEK
+  TEN_WEEK
+}
+
+// User model
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  firstName     String?
+  lastName      String?
+  phone         String?
+  role          UserRole  @default(CLIENT)
+  googleId      String?   @unique
+  passwordHash  String?
+  isVerified    Boolean   @default(false)
+  isActive      Boolean   @default(true)
+
+  // Parental consent for under-18s
+  dateOfBirth   DateTime?
+  parentEmail   String?
+  parentName    String?
+  consentGiven  Boolean   @default(false)
+
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+
+  // Relations
+  bookings      Booking[]
+  packages      Package[]
+  payments      Payment[]
+  notifications UserNotification[]
+
+  @@index([email])
+  @@index([googleId])
+  @@map("users")
+}
+
+// Session configuration (prices, durations, etc.)
+model SessionConfig {
+  id          String      @id @default(uuid())
+  type        SessionType @unique
+  name        String
+  description String?
+  duration    Int         // in minutes
+  price       Decimal     @db.Decimal(10, 2)
+  maxParticipants Int     @default(1)
+  isActive    Boolean     @default(true)
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  bookings    Booking[]
+
+  @@map("session_configs")
+}
+
+// Booking model
+model Booking {
+  id              String        @id @default(uuid())
+  userId          String
+  sessionConfigId String
+
+  // Booking details
+  startTime       DateTime
+  endTime         DateTime
+  status          BookingStatus @default(PENDING)
+
+  // Google Calendar integration
+  googleEventId   String?       @unique
+
+  // Notes and metadata
+  notes           String?
+  adminNotes      String?
+
+  // Cancellation/Rescheduling
+  cancelledAt     DateTime?
+  cancellationReason String?
+  rescheduledFrom String?       // Reference to previous booking ID
+
+  // Package relation (if booked via package)
+  packageId       String?
+
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionConfig   SessionConfig @relation(fields: [sessionConfigId], references: [id])
+  payment         Payment?
+  package         Package?      @relation(fields: [packageId], references: [id])
+
+  @@index([userId])
+  @@index([startTime])
+  @@index([status])
+  @@index([googleEventId])
+  @@map("bookings")
+}
+
+// Package model for block bookings
+model Package {
+  id              String      @id @default(uuid())
+  userId          String
+  type            PackageType
+
+  // Package details
+  totalSessions   Int
+  usedSessions    Int         @default(0)
+  price           Decimal     @db.Decimal(10, 2)
+  discount        Decimal     @db.Decimal(10, 2)
+
+  // Scheduling
+  preferredDay    String?     // e.g., "MONDAY"
+  preferredTime   String?     // e.g., "18:00"
+
+  // Status
+  isActive        Boolean     @default(true)
+  expiresAt       DateTime?
+
+  // Timestamps
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings        Booking[]
+  payment         Payment?
+
+  @@index([userId])
+  @@index([isActive])
+  @@map("packages")
+}
+
+// Payment model
+model Payment {
+  id              String        @id @default(uuid())
+  userId          String
+  bookingId       String?       @unique
+  packageId       String?       @unique
+
+  // Stripe details
+  stripePaymentId String        @unique
+  stripeCustomerId String?
+
+  // Payment details
+  amount          Decimal       @db.Decimal(10, 2)
+  currency        String        @default("gbp")
+  status          PaymentStatus @default(PENDING)
+
+  // Refund details
+  refundAmount    Decimal?      @db.Decimal(10, 2)
+  refundReason    String?
+  refundedAt      DateTime?
+
+  // Metadata
+  metadata        Json?
+
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking         Booking?      @relation(fields: [bookingId], references: [id])
+  package         Package?      @relation(fields: [packageId], references: [id])
+
+  @@index([userId])
+  @@index([stripePaymentId])
+  @@index([status])
+  @@map("payments")
+}
+
+// Calendar availability blocks
+model AvailabilityBlock {
+  id              String    @id @default(uuid())
+
+  // Block details
+  startTime       DateTime
+  endTime         DateTime
+  isBlocked       Boolean   @default(false)
+
+  // Reason for blocking (travel, rest, etc.)
+  reason          String?
+
+  // Google Calendar integration
+  googleEventId   String?   @unique
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([startTime])
+  @@index([isBlocked])
+  @@map("availability_blocks")
+}
+
+// Working hours configuration
+model WorkingHours {
+  id              String    @id @default(uuid())
+  dayOfWeek       Int       // 0 = Sunday, 1 = Monday, etc.
+  startTime       String    // HH:mm format
+  endTime         String    // HH:mm format
+  isActive        Boolean   @default(true)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([dayOfWeek])
+  @@map("working_hours")
+}
+
+// Events and camps
+model Event {
+  id              String    @id @default(uuid())
+  title           String
+  description     String
+
+  // Event details
+  startDate       DateTime
+  endDate         DateTime
+  location        String?
+  capacity        Int
+  currentBookings Int       @default(0)
+
+  // Pricing
+  price           Decimal   @db.Decimal(10, 2)
+
+  // Media
+  imageUrl        String?
+  videoUrl        String?
+
+  // Status
+  isPublished     Boolean   @default(false)
+  isFeatured      Boolean   @default(false)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([startDate])
+  @@index([isPublished])
+  @@map("events")
+}
+
+// Media gallery
+model Media {
+  id              String    @id @default(uuid())
+  title           String
+  description     String?
+
+  // Media details
+  type            String    // 'image' or 'video'
+  url             String
+  thumbnailUrl    String?
+
+  // S3 details
+  s3Key           String    @unique
+  s3Bucket        String
+
+  // Metadata
+  fileSize        Int?
+  mimeType        String?
+
+  // Display options
+  isFeatured      Boolean   @default(false)
+  order           Int       @default(0)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([type])
+  @@index([isFeatured])
+  @@map("media")
+}
+
+// Discount codes
+model DiscountCode {
+  id              String    @id @default(uuid())
+  code            String    @unique
+  description     String?
+
+  // Discount details
+  discountType    String    // 'PERCENTAGE' or 'FIXED'
+  discountValue   Decimal   @db.Decimal(10, 2)
+
+  // Limits
+  maxUses         Int?
+  currentUses     Int       @default(0)
+  validFrom       DateTime
+  validUntil      DateTime
+
+  // Restrictions
+  minPurchase     Decimal?  @db.Decimal(10, 2)
+  applicableTo    String?   // 'SESSION', 'PACKAGE', 'ALL'
+
+  // Status
+  isActive        Boolean   @default(true)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([code])
+  @@index([isActive])
+  @@map("discount_codes")
+}
+
+// Notifications
+model Notification {
+  id              String    @id @default(uuid())
+  type            String    // 'EMAIL', 'SMS', 'BOTH'
+  event           String    // 'BOOKING_CONFIRMED', 'REMINDER_24H', etc.
+
+  // Template
+  subject         String?
+  emailTemplate   String?
+  smsTemplate     String?
+
+  // Settings
+  isActive        Boolean   @default(true)
+  sendBefore      Int?      // Minutes before event (for reminders)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([event])
+  @@map("notifications")
+}
+
+// User notification log
+model UserNotification {
+  id              String    @id @default(uuid())
+  userId          String
+  type            String
+
+  // Content
+  subject         String?
+  message         String
+
+  // Status
+  sentAt          DateTime?
+  failedAt        DateTime?
+  errorMessage    String?
+
+  // Metadata
+  metadata        Json?
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("user_notifications")
+}
+
+// Analytics events
+model AnalyticsEvent {
+  id              String    @id @default(uuid())
+  eventType       String
+  userId          String?
+
+  // Event data
+  data            Json?
+
+  // Session tracking
+  sessionId       String?
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+
+  @@index([eventType])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("analytics_events")
+}
+
+// System configuration
+model SystemConfig {
+  id              String    @id @default(uuid())
+  key             String    @unique
+  value           String
+  description     String?
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("system_config")
+}
