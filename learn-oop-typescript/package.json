@@ -1,0 +1,27 @@
+{
+  "name": "learn-oop-typescript",
+  "version": "1.0.0",
+  "description": "Learn OOP in TypeScript — build toward Playwright proficiency",
+  "scripts": {
+    "lesson": "npx ts-node",
+    "lesson:1": "npx ts-node src/lessons/01-classes-and-objects.ts",
+    "lesson:2": "npx ts-node src/lessons/02-access-modifiers.ts",
+    "lesson:3": "npx ts-node src/lessons/03-inheritance.ts",
+    "lesson:4": "npx ts-node src/lessons/04-interfaces.ts",
+    "lesson:5": "npx ts-node src/lessons/05-abstract-classes.ts",
+    "lesson:6": "npx ts-node src/lessons/06-generics.ts",
+    "lesson:7": "npx ts-node src/playwright-patterns/07-page-object-model.ts",
+    "lesson:8": "npx ts-node src/playwright-patterns/08-full-test-example.ts",
+    "exercise:1": "npx ts-node src/exercises/ex01-build-a-class.ts",
+    "exercise:2": "npx ts-node src/exercises/ex02-inheritance-challenge.ts",
+    "exercise:3": "npx ts-node src/exercises/ex03-interface-design.ts",
+    "test": "npx playwright test",
+    "check": "npx tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2",
+    "@types/node": "^20.10.0",
+    "@playwright/test": "^1.40.0"
+  }
+}
