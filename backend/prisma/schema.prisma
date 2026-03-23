@@ -427,6 +427,508 @@ model AnalyticsEvent {
   @@map("analytics_events")
 }
 
+// =============================================
+// PASSIVE INCOME AUTOMATION MODELS
+// =============================================
+
+// Lead source
+enum LeadSource {
+  BLOG_POST
+  LANDING_PAGE
+  SOCIAL_MEDIA
+  REFERRAL
+  ORGANIC
+  PAID_AD
+  POPUP
+}
+
+// Lead status
+enum LeadStatus {
+  NEW
+  NURTURING
+  QUALIFIED
+  CONVERTED
+  UNSUBSCRIBED
+  BOUNCED
+}
+
+// Email sequence status
+enum SequenceStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+// Digital product type
+enum DigitalProductType {
+  EBOOK
+  VIDEO_COURSE
+  TRAINING_PLAN
+  MEAL_PLAN
+  BUNDLE
+}
+
+// Content status
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+}
+
+// Affiliate product category
+enum AffiliateCategory {
+  SPORTS_GEAR
+  NUTRITION
+  TRAINING_EQUIPMENT
+  ONLINE_COURSES
+  APPAREL
+  FOOTWEAR
+}
+
+// Lead model - email subscribers and prospects
+model Lead {
+  id            String      @id @default(uuid())
+  email         String      @unique
+  firstName     String?
+  lastName      String?
+  phone         String?
+
+  // Lead metadata
+  source        LeadSource  @default(LANDING_PAGE)
+  status        LeadStatus  @default(NEW)
+  score         Int         @default(0)   // Lead scoring 0-100
+  tags          String[]    // e.g. ['football', 'youth', 'parent']
+
+  // Lead magnet they opted in for
+  leadMagnetId  String?
+  leadMagnet    LeadMagnet? @relation(fields: [leadMagnetId], references: [id])
+
+  // Tracking
+  ipAddress     String?
+  userAgent     String?
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  referrer      String?
+
+  // Converted to user
+  userId        String?     @unique
+  convertedAt   DateTime?
+
+  // GDPR
+  consentGiven  Boolean     @default(false)
+  consentDate   DateTime?
+
+  // Timestamps
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  lastActivityAt DateTime?
+
+  // Relations
+  emailStatuses LeadEmailStatus[]
+  affiliateClicks AffiliateClick[]
+  productPurchases DigitalProductPurchase[]
+
+  @@index([email])
+  @@index([status])
+  @@index([source])
+  @@index([score])
+  @@map("leads")
+}
+
+// Lead magnet (free offer to capture emails)
+model LeadMagnet {
+  id            String    @id @default(uuid())
+  title         String
+  description   String
+  type          String    // 'EBOOK', 'VIDEO', 'CHECKLIST', 'MINI_COURSE'
+  fileUrl       String?   // S3 URL for downloadable
+  thumbnailUrl  String?
+  isActive      Boolean   @default(true)
+
+  // Landing page
+  slug          String    @unique
+  pageTitle     String?
+  pageContent   String?   // HTML/markdown content
+
+  // Stats
+  viewCount     Int       @default(0)
+  signupCount   Int       @default(0)
+
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  leads         Lead[]
+  sequences     EmailSequence[]
+
+  @@index([slug])
+  @@map("lead_magnets")
+}
+
+// Email sequence (automated drip campaign)
+model EmailSequence {
+  id              String    @id @default(uuid())
+  name            String
+  description     String?
+  triggerEvent    String    // 'LEAD_SIGNUP', 'PRODUCT_PURCHASE', 'BOOKING_INQUIRY'
+
+  // Config
+  isActive        Boolean   @default(true)
+  leadMagnetId    String?
+  leadMagnet      LeadMagnet? @relation(fields: [leadMagnetId], references: [id])
+
+  // Stats
+  totalSent       Int       @default(0)
+  totalOpened     Int       @default(0)
+  totalClicked    Int       @default(0)
+  totalConverted  Int       @default(0)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  emails          SequenceEmail[]
+  statuses        LeadEmailStatus[]
+
+  @@map("email_sequences")
+}
+
+// Individual email in a sequence
+model SequenceEmail {
+  id              String    @id @default(uuid())
+  sequenceId      String
+  sequence        EmailSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+
+  // Position in sequence
+  stepNumber      Int
+  delayDays       Int       @default(0)  // Days after previous email
+
+  // Content
+  subject         String
+  previewText     String?
+  htmlContent     String
+  textContent     String?
+
+  // Call to action
+  ctaText         String?
+  ctaUrl          String?
+
+  // Affiliate integration
+  affiliateProductId String?
+
+  // Stats
+  sentCount       Int       @default(0)
+  openCount       Int       @default(0)
+  clickCount      Int       @default(0)
+  conversionCount Int       @default(0)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([sequenceId, stepNumber])
+  @@index([sequenceId])
+  @@map("sequence_emails")
+}
+
+// Track which emails have been sent to which leads
+model LeadEmailStatus {
+  id              String          @id @default(uuid())
+  leadId          String
+  lead            Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  sequenceId      String
+  sequence        EmailSequence   @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+
+  // Current position
+  currentStep     Int             @default(0)
+  status          SequenceStatus  @default(ACTIVE)
+
+  // Tracking
+  sentCount       Int             @default(0)
+  openCount       Int             @default(0)
+  clickCount      Int             @default(0)
+  lastSentAt      DateTime?
+  nextScheduledAt DateTime?
+  completedAt     DateTime?
+
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([leadId, sequenceId])
+  @@index([nextScheduledAt])
+  @@index([status])
+  @@map("lead_email_statuses")
+}
+
+// Affiliate products to promote
+model AffiliateProduct {
+  id              String              @id @default(uuid())
+  name            String
+  description     String
+  category        AffiliateCategory
+  brand           String?
+
+  // Affiliate data
+  affiliateUrl    String              // Your tracking URL
+  trackingCode    String              @unique
+  commissionRate  Float               // e.g., 0.08 = 8%
+  commissionType  String              @default("PERCENTAGE")  // or 'FIXED'
+  cookieDays      Int                 @default(30)
+
+  // Product info
+  productPrice    Float?
+  imageUrl        String?
+  networkName     String?             // e.g. 'Amazon Associates', 'ShareASale'
+
+  // Status
+  isActive        Boolean             @default(true)
+  isFeatured      Boolean             @default(false)
+
+  // Stats
+  clickCount      Int                 @default(0)
+  conversionCount Int                 @default(0)
+  totalEarnings   Float               @default(0)
+
+  // Timestamps
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  // Relations
+  clicks          AffiliateClick[]
+
+  @@index([category])
+  @@index([isActive])
+  @@map("affiliate_products")
+}
+
+// Track affiliate clicks
+model AffiliateClick {
+  id              String            @id @default(uuid())
+  productId       String
+  product         AffiliateProduct  @relation(fields: [productId], references: [id])
+
+  // Attribution
+  leadId          String?
+  lead            Lead?             @relation(fields: [leadId], references: [id])
+  contentPostId   String?
+  sourceUrl       String?           // Which page they clicked from
+
+  // Visitor data
+  ipAddress       String?
+  userAgent       String?
+
+  // Conversion
+  converted       Boolean           @default(false)
+  conversionValue Float?
+  commissionEarned Float?
+  convertedAt     DateTime?
+
+  // Timestamps
+  createdAt       DateTime          @default(now())
+
+  @@index([productId])
+  @@index([leadId])
+  @@index([createdAt])
+  @@map("affiliate_clicks")
+}
+
+// Digital products for sale
+model DigitalProduct {
+  id              String                @id @default(uuid())
+  name            String
+  slug            String                @unique
+  description     String
+  type            DigitalProductType
+  category        String?
+
+  // Pricing
+  priceGBP        Float
+  compareAtPrice  Float?               // Original price (for showing discount)
+  stripePriceId   String?
+
+  // Content
+  thumbnailUrl    String?
+  previewUrl      String?
+  fileUrl         String?              // S3 URL (for delivered products)
+  fileSize        Int?                 // bytes
+
+  // Sales page
+  pageContent     String?              // Rich content
+  features        String[]             // Bullet points
+  testimonials    Json?                // Array of testimonials
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+
+  // Status
+  isActive        Boolean              @default(true)
+  isFeatured      Boolean              @default(false)
+
+  // Stats
+  viewCount       Int                  @default(0)
+  purchaseCount   Int                  @default(0)
+  totalRevenue    Float                @default(0)
+
+  // Timestamps
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  // Relations
+  purchases       DigitalProductPurchase[]
+
+  @@index([slug])
+  @@index([type])
+  @@map("digital_products")
+}
+
+// Digital product purchases
+model DigitalProductPurchase {
+  id              String          @id @default(uuid())
+  productId       String
+  product         DigitalProduct  @relation(fields: [productId], references: [id])
+
+  // Buyer
+  leadId          String?
+  lead            Lead?           @relation(fields: [leadId], references: [id])
+  userId          String?
+  buyerEmail      String
+  buyerName       String?
+
+  // Payment
+  amountPaid      Float
+  currency        String          @default("GBP")
+  stripePaymentId String?
+  stripeSessionId String?
+
+  // Delivery
+  downloadUrl     String?         // Signed S3 URL
+  downloadExpiry  DateTime?
+  downloadCount   Int             @default(0)
+  downloadLimit   Int             @default(5)
+
+  // Status
+  status          String          @default("PENDING")  // PENDING, COMPLETED, REFUNDED
+
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([productId])
+  @@index([buyerEmail])
+  @@index([status])
+  @@map("digital_product_purchases")
+}
+
+// AI-generated content posts (blog, SEO)
+model ContentPost {
+  id              String          @id @default(uuid())
+  title           String
+  slug            String          @unique
+  excerpt         String?
+  content         String          // Full HTML/markdown content
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  focusKeyword    String?
+  keywords        String[]
+  seoScore        Int?
+
+  // Categorization
+  category        String?
+  tags            String[]
+
+  // AI generation metadata
+  aiGenerated     Boolean         @default(false)
+  aiModel         String?
+  generationPrompt String?
+
+  // Images
+  featuredImageUrl String?
+  imageAlt        String?
+
+  // Publishing
+  status          ContentStatus   @default(DRAFT)
+  publishedAt     DateTime?
+  scheduledAt     DateTime?
+
+  // Monetization
+  affiliateLinks  Json?           // Array of {productId, anchorText, url}
+  hasLeadMagnet   Boolean         @default(false)
+  leadMagnetId    String?
+
+  // Stats
+  viewCount       Int             @default(0)
+  shareCount      Int             @default(0)
+  clickCount      Int             @default(0)  // Affiliate clicks
+
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  author          String          @default("Gus Sanches")
+
+  @@index([slug])
+  @@index([status])
+  @@index([publishedAt])
+  @@index([category])
+  @@map("content_posts")
+}
+
+// Social media posts (auto-scheduled)
+model SocialPost {
+  id              String    @id @default(uuid())
+  contentPostId   String?   // Source blog post (if any)
+
+  // Content
+  platform        String    // 'TWITTER', 'INSTAGRAM', 'FACEBOOK', 'LINKEDIN'
+  caption         String
+  hashtags        String[]
+  imageUrl        String?
+
+  // Scheduling
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  status          String    @default("DRAFT")  // DRAFT, SCHEDULED, PUBLISHED, FAILED
+
+  // Stats
+  likes           Int       @default(0)
+  shares          Int       @default(0)
+  comments        Int       @default(0)
+  reach           Int       @default(0)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([platform, status])
+  @@index([scheduledAt])
+  @@map("social_posts")
+}
+
+// Revenue tracking (aggregated for dashboard)
+model RevenueRecord {
+  id              String    @id @default(uuid())
+  date            DateTime  @db.Date
+  source          String    // 'BOOKINGS', 'DIGITAL_PRODUCTS', 'AFFILIATE'
+  amount          Float
+  currency        String    @default("GBP")
+  metadata        Json?
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+
+  @@index([date])
+  @@index([source])
+  @@map("revenue_records")
+}
+
 // System configuration
 model SystemConfig {
   id              String    @id @default(uuid())
