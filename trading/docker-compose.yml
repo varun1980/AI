@@ -1,0 +1,77 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: trading-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: trading
+      POSTGRES_PASSWORD: trading_secret
+      POSTGRES_DB: tradingdb
+    ports:
+      - '5433:5432'
+    volumes:
+      - trading_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U trading -d tradingdb']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: trading-redis
+    restart: unless-stopped
+    ports:
+      - '6380:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: trading-backend
+    restart: unless-stopped
+    ports:
+      - '4001:4001'
+    environment:
+      - DATABASE_URL=postgresql://trading:trading_secret@postgres:5432/tradingdb
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PORT=4001
+      - FRONTEND_URL=http://localhost:3001
+      - PAPER_TRADING=true
+      - COINBASE_API_KEY=${COINBASE_API_KEY:-}
+      - COINBASE_API_SECRET=${COINBASE_API_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:4001/api/v1/portfolio/summary']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: trading-frontend
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:4001/api/v1
+      - NEXT_PUBLIC_WS_URL=http://localhost:4001
+    depends_on:
+      - backend
+
+volumes:
+  trading_postgres_data:

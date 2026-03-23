@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TradeSide {
+  BUY
+  SELL
+}
+
+enum TradeStatus {
+  PENDING
+  OPEN
+  FILLED
+  CANCELLED
+  REJECTED
+  CLOSED
+}
+
+enum OrderType {
+  MARKET
+  LIMIT
+  STOP_LIMIT
+}
+
+enum StrategyStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum ConditionType {
+  PRICE_ABOVE
+  PRICE_BELOW
+  PRICE_CROSSES_UP
+  PRICE_CROSSES_DOWN
+  RSI_ABOVE
+  RSI_BELOW
+  MA_CROSSOVER_UP
+  MA_CROSSOVER_DOWN
+  PERCENT_CHANGE_UP
+  PERCENT_CHANGE_DOWN
+}
+
+enum AlertCondition {
+  ABOVE
+  BELOW
+  CROSSES_UP
+  CROSSES_DOWN
+}
+
+model Trade {
+  id           String      @id @default(cuid())
+  orderId      String      @unique
+  clientOrderId String?    @unique
+  symbol       String
+  side         TradeSide
+  orderType    OrderType
+  requestedSize Decimal    @db.Decimal(20, 8)
+  filledSize   Decimal?    @db.Decimal(20, 8)
+  requestedPrice Decimal?  @db.Decimal(20, 8)
+  avgFillPrice Decimal?    @db.Decimal(20, 8)
+  stopLoss     Decimal?    @db.Decimal(20, 8)
+  takeProfit   Decimal?    @db.Decimal(20, 8)
+  status       TradeStatus @default(PENDING)
+  fees         Decimal?    @db.Decimal(20, 8)
+  pnl          Decimal?    @db.Decimal(20, 8)
+  notes        String?
+  strategyId   String?
+  scheduledOrderId String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  filledAt     DateTime?
+  closedAt     DateTime?
+
+  strategy     Strategy?      @relation(fields: [strategyId], references: [id])
+  scheduledOrder ScheduledOrder? @relation(fields: [scheduledOrderId], references: [id])
+}
+
+model Strategy {
+  id           String         @id @default(cuid())
+  name         String
+  description  String?
+  symbol       String
+  status       StrategyStatus @default(PAUSED)
+  conditions   Json           // StrategyCondition[]
+  action       Json           // StrategyAction
+  riskPercent  Decimal        @default(2) @db.Decimal(5, 2) // max 5%
+  maxPositionSize Decimal?    @db.Decimal(20, 8)
+  cooldownMinutes Int         @default(0)
+  lastTriggeredAt DateTime?
+  triggerCount  Int           @default(0)
+  trades        Trade[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model ScheduledOrder {
+  id           String      @id @default(cuid())
+  name         String
+  symbol       String
+  side         TradeSide
+  orderType    OrderType
+  size         Decimal     @db.Decimal(20, 8)
+  limitPrice   Decimal?    @db.Decimal(20, 8)
+  stopLoss     Decimal?    @db.Decimal(20, 8)
+  takeProfit   Decimal?    @db.Decimal(20, 8)
+  cronExpr     String
+  timezone     String      @default("UTC")
+  isActive     Boolean     @default(true)
+  riskPercent  Decimal     @default(2) @db.Decimal(5, 2)
+  lastRunAt    DateTime?
+  nextRunAt    DateTime?
+  runCount     Int         @default(0)
+  maxRuns      Int?        // null = unlimited
+  trades       Trade[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Position {
+  id           String      @id @default(cuid())
+  symbol       String      @unique
+  size         Decimal     @db.Decimal(20, 8)
+  avgEntryPrice Decimal    @db.Decimal(20, 8)
+  currentPrice Decimal?    @db.Decimal(20, 8)
+  unrealizedPnl Decimal?   @db.Decimal(20, 8)
+  realizedPnl  Decimal     @default(0) @db.Decimal(20, 8)
+  stopLoss     Decimal?    @db.Decimal(20, 8)
+  takeProfit   Decimal?    @db.Decimal(20, 8)
+  updatedAt    DateTime    @updatedAt
+  openedAt     DateTime    @default(now())
+}
+
+model PriceAlert {
+  id           String         @id @default(cuid())
+  symbol       String
+  condition    AlertCondition
+  targetPrice  Decimal        @db.Decimal(20, 8)
+  message      String?
+  isActive     Boolean        @default(true)
+  isTriggered  Boolean        @default(false)
+  triggeredAt  DateTime?
+  triggeredPrice Decimal?     @db.Decimal(20, 8)
+  createdAt    DateTime       @default(now())
+}
+
+model ApiConfig {
+  id           String      @id @default(cuid())
+  exchange     String      @default("coinbase")
+  apiKey       String
+  apiSecret    String
+  isPaper      Boolean     @default(true)
+  isActive     Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
