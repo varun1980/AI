@@ -35,8 +35,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-bebas)', 'Impact', 'sans-serif'],
+        sans: ['system-ui', 'sans-serif'],
+        display: ['Impact', 'Arial Black', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
