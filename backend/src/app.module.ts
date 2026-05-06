@@ -16,6 +16,7 @@ import { MediaModule } from './modules/media/media.module';
 import { EventsModule } from './modules/events/events.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { LeadsModule } from './modules/leads/leads.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { AdminModule } from './modules/admin/admin.module';
     EventsModule,
     AnalyticsModule,
     AdminModule,
+    LeadsModule,
   ],
 })
 export class AppModule {}

@@ -78,6 +78,14 @@ export const mediaApi = {
   getById: (id: string) => api.get(`/media/${id}`),
 };
 
+// Leads endpoints
+export const leadsApi = {
+  enrich: (data: { niche: string; city: string; leads: any[] }) =>
+    api.post('/leads/enrich', data),
+  generate: (data: { leads: any[] }) =>
+    api.post('/leads/generate', data),
+};
+
 // Admin endpoints
 export const adminApi = {
   getDashboard: () => api.get('/admin/dashboard'),

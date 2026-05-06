@@ -17,6 +17,7 @@ export function Navbar() {
     { name: 'Media', href: '/media' },
     { name: 'About', href: '/about' },
     { name: 'Contact', href: '/contact' },
+    { name: 'Lead Gen', href: '/leads' },
   ];
 
   return (
