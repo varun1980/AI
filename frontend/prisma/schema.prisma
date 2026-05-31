@@ -1,0 +1,76 @@
+// Prize Arena — Postgres schema.
+// Used when DATABASE_URL is set. Run:
+//   npm run prisma:generate && npm run prisma:push && npm run prisma:seed
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Competition {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  subtitle        String
+  category        String
+  status          String   @default("live")
+  image           String
+  gallery         String[]
+  ticketPrice     Int // pence
+  totalTickets    Int
+  ticketsSold     Int      @default(0)
+  maxPerUser      Int      @default(50)
+  cashAlternative Int? // pence
+  drawDate        DateTime
+  description     String
+  highlights      String[]
+  skillQuestion   Json
+  instantWins     Json?
+  featured        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  orders OrderItem[]
+
+  @@index([category])
+  @@index([status])
+}
+
+model Winner {
+  id               String   @id @default(cuid())
+  name             String
+  location         String
+  prize            String
+  competitionTitle String
+  image            String
+  ticketNumber     Int
+  drawnAt          DateTime
+  quote            String?
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  email     String
+  amount    Int // pence
+  status    String      @default("paid")
+  stripeId  String?
+  createdAt DateTime    @default(now())
+  items     OrderItem[]
+}
+
+model OrderItem {
+  id            String      @id @default(cuid())
+  order         Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId       String
+  competition   Competition @relation(fields: [competitionId], references: [id])
+  competitionId String
+  quantity      Int
+  ticketNumbers Int[]
+
+  @@index([orderId])
+  @@index([competitionId])
+}

@@ -1,8 +1,9 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import localFont from 'next/font/local';
+import type { Metadata, Viewport } from 'next';
+import { Inter, Anton } from 'next/font/google';
 import '../styles/globals.css';
 import { Providers } from './providers';
+import { Navbar } from '@/components/layout/Navbar';
+import { Footer } from '@/components/layout/Footer';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -10,31 +11,39 @@ const inter = Inter({
   display: 'swap',
 });
 
-const bebas = localFont({
-  src: '../styles/fonts/BebasNeue-Regular.woff2',
-  variable: '--font-bebas',
+const display = Anton({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-display',
   display: 'swap',
-  fallback: ['Impact', 'sans-serif'],
 });
 
 export const metadata: Metadata = {
-  title: 'Sanches Coaching - Premium Football Training',
-  description: 'Book premium football coaching sessions with Gus Sanches',
-  keywords: ['football', 'coaching', 'training', 'Gus Sanches', 'premium'],
-  authors: [{ name: 'Gus Sanches' }],
-  viewport: 'width=device-width, initial-scale=1',
-  themeColor: '#0a0a0a',
+  title: {
+    default: 'Prize Arena — Win Cars, Cash & Tech from £0.99',
+    template: '%s | Prize Arena',
+  },
+  description:
+    'Prize Arena runs live online competitions to win dream cars, tax-free cash and the latest tech. Low odds, instant wins and live draws. Enter from just £0.99.',
+  keywords: ['competitions', 'prize draws', 'win a car', 'raffle', 'instant wins', 'cash competitions'],
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const viewport: Viewport = {
+  themeColor: '#06070a',
+  width: 'device-width',
+  initialScale: 1,
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${bebas.variable}`}>
-      <body className="bg-dark-950 text-white font-sans antialiased">
-        <Providers>{children}</Providers>
+    <html lang="en" className={`${inter.variable} ${display.variable}`}>
+      <body className="bg-ink-950 text-white font-sans antialiased min-h-screen flex flex-col">
+        <Providers>
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </Providers>
       </body>
     </html>
   );

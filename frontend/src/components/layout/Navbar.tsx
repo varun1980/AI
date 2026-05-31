@@ -1,124 +1,105 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-import { useAuthStore } from '@/store/authStore';
-import { FiMenu, FiX, FiUser } from 'react-icons/fi';
+import { useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { FiMenu, FiX, FiShoppingCart, FiUser } from 'react-icons/fi';
+import { useCart } from '@/store/cartStore';
+import { cn } from '@/lib/utils';
+
+const links = [
+  { href: '/competitions', label: 'Competitions' },
+  { href: '/winners', label: 'Winners' },
+  { href: '/how-it-works', label: 'How It Works' },
+  { href: '/faq', label: 'FAQ' },
+];
 
 export function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
-  const { isAuthenticated, user, logout } = useAuthStore();
-
-  const navigation = [
-    { name: 'Home', href: '/' },
-    { name: 'Book', href: '/book' },
-    { name: 'Packages', href: '/packages' },
-    { name: 'Events', href: '/events' },
-    { name: 'Media', href: '/media' },
-    { name: 'About', href: '/about' },
-    { name: 'Contact', href: '/contact' },
-  ];
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const count = useCart((s) => s.count());
+  const openCart = useCart((s) => s.open);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-dark-950/95 backdrop-blur-sm border-b border-dark-800">
-      <div className="container-custom">
-        <div className="flex items-center justify-between h-20">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-display text-2xl">SC</span>
-            </div>
-            <span className="font-display text-2xl uppercase tracking-wider">
-              Sanches <span className="text-primary-500">Coaching</span>
-            </span>
-          </Link>
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-ink-950/80 backdrop-blur-xl">
+      <div className="container-custom flex h-16 items-center justify-between">
+        <Link href="/" className="flex items-center gap-2">
+          <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary-500 font-display text-xl text-ink-950">
+            P
+          </span>
+          <span className="font-display text-2xl uppercase tracking-wider">
+            Prize<span className="text-primary-400">Arena</span>
+          </span>
+        </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="text-gray-300 hover:text-primary-500 transition-colors duration-200 uppercase text-sm tracking-wider"
-              >
-                {item.name}
-              </Link>
-            ))}
+        <nav className="hidden items-center gap-8 md:flex">
+          {links.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={cn(
+                'text-sm font-medium transition-colors hover:text-primary-400',
+                pathname === l.href ? 'text-primary-400' : 'text-gray-300',
+              )}
+            >
+              {l.label}
+            </Link>
+          ))}
+        </nav>
 
-            {isAuthenticated ? (
-              <div className="flex items-center space-x-4">
-                <Link href="/dashboard" className="btn-primary">
-                  <FiUser className="mr-2" />
-                  Dashboard
-                </Link>
-                <button onClick={logout} className="text-gray-400 hover:text-white">
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <Link href="/login" className="btn-primary">
-                Login
-              </Link>
-            )}
-          </div>
-
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden p-2 text-gray-400 hover:text-white"
-            onClick={() => setIsOpen(!isOpen)}
+        <div className="flex items-center gap-2">
+          <Link
+            href="/account"
+            className="hidden h-10 w-10 place-items-center rounded-lg text-gray-300 hover:bg-white/5 hover:text-white sm:grid"
+            aria-label="Account"
           >
-            {isOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+            <FiUser size={20} />
+          </Link>
+          <button
+            onClick={openCart}
+            className="relative grid h-10 w-10 place-items-center rounded-lg text-gray-300 hover:bg-white/5 hover:text-white"
+            aria-label="Open basket"
+          >
+            <FiShoppingCart size={20} />
+            {count > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-primary-500 px-1 text-[11px] font-bold text-ink-950">
+                {count}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setOpen((o) => !o)}
+            className="grid h-10 w-10 place-items-center rounded-lg text-gray-300 hover:bg-white/5 md:hidden"
+            aria-label="Menu"
+          >
+            {open ? <FiX size={22} /> : <FiMenu size={22} />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Navigation */}
-      {isOpen && (
-        <div className="md:hidden border-t border-dark-800 bg-dark-900">
-          <div className="container-custom py-4 space-y-3">
-            {navigation.map((item) => (
+      {open && (
+        <nav className="border-t border-white/10 bg-ink-950 md:hidden">
+          <div className="container-custom flex flex-col py-2">
+            {links.map((l) => (
               <Link
-                key={item.name}
-                href={item.href}
-                className="block py-2 text-gray-300 hover:text-primary-500 transition-colors uppercase text-sm tracking-wider"
-                onClick={() => setIsOpen(false)}
+                key={l.href}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                className="py-3 text-base font-medium text-gray-200 hover:text-primary-400"
               >
-                {item.name}
+                {l.label}
               </Link>
             ))}
-            <div className="pt-4 border-t border-dark-800">
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    href="/dashboard"
-                    className="block py-2 text-primary-500"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
-                  <button
-                    onClick={() => {
-                      logout();
-                      setIsOpen(false);
-                    }}
-                    className="block py-2 text-gray-400"
-                  >
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <Link
-                  href="/login"
-                  className="block py-2 text-primary-500"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Login
-                </Link>
-              )}
-            </div>
+            <Link
+              href="/account"
+              onClick={() => setOpen(false)}
+              className="py-3 text-base font-medium text-gray-200 hover:text-primary-400"
+            >
+              My Account
+            </Link>
           </div>
-        </div>
+        </nav>
       )}
-    </nav>
+    </header>
   );
 }

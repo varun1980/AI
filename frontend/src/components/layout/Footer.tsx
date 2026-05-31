@@ -1,96 +1,81 @@
 import Link from 'next/link';
-import { FiInstagram, FiTwitter, FiFacebook, FiMail, FiPhone } from 'react-icons/fi';
+import { FiInstagram, FiFacebook, FiTwitter } from 'react-icons/fi';
 
 export function Footer() {
-  const currentYear = new Date().getFullYear();
-
   return (
-    <footer className="bg-dark-900 border-t border-dark-800">
-      <div className="container-custom py-12">
-        <div className="grid md:grid-cols-4 gap-8 mb-8">
-          {/* Brand */}
-          <div>
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-display text-xl">SC</span>
-              </div>
-              <span className="font-display text-xl uppercase">
-                Sanches Coaching
-              </span>
+    <footer className="border-t border-white/10 bg-ink-900">
+      <div className="container-custom py-14">
+        <div className="grid gap-10 md:grid-cols-4">
+          <div className="md:col-span-1">
+            <div className="font-display text-2xl uppercase tracking-wider">
+              Prize<span className="text-primary-400">Arena</span>
             </div>
-            <p className="text-gray-400 text-sm">
-              Premium football coaching for players of all levels
+            <p className="mt-3 text-sm text-gray-400">
+              Live online prize competitions. Win dream cars, tax-free cash and the latest tech from
+              as little as 49p.
             </p>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h3 className="font-display uppercase text-sm mb-4">Quick Links</h3>
-            <ul className="space-y-2">
-              {['About', 'Book', 'Packages', 'Events', 'Contact'].map((item) => (
-                <li key={item}>
-                  <Link
-                    href={`/${item.toLowerCase()}`}
-                    className="text-gray-400 hover:text-primary-500 text-sm transition-colors"
-                  >
-                    {item}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h3 className="font-display uppercase text-sm mb-4">Contact</h3>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li className="flex items-center">
-                <FiMail className="mr-2 text-primary-500" />
-                gus@sanchescoaching.co.uk
-              </li>
-              <li className="flex items-center">
-                <FiPhone className="mr-2 text-primary-500" />
-                +44 7XXX XXXXXX
-              </li>
-            </ul>
-          </div>
-
-          {/* Social */}
-          <div>
-            <h3 className="font-display uppercase text-sm mb-4">Follow Us</h3>
-            <div className="flex space-x-4">
-              {[
-                { icon: FiInstagram, href: 'https://instagram.com/sanchescoaching' },
-                { icon: FiTwitter, href: '#' },
-                { icon: FiFacebook, href: '#' },
-              ].map((social, index) => (
-                <a
-                  key={index}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 bg-dark-800 rounded-full flex items-center justify-center hover:bg-primary-500 transition-colors"
-                >
-                  <social.icon className="text-lg" />
-                </a>
-              ))}
+            <div className="mt-4 flex gap-3 text-gray-400">
+              <a href="#" aria-label="Instagram" className="hover:text-primary-400"><FiInstagram size={20} /></a>
+              <a href="#" aria-label="Facebook" className="hover:text-primary-400"><FiFacebook size={20} /></a>
+              <a href="#" aria-label="Twitter" className="hover:text-primary-400"><FiTwitter size={20} /></a>
             </div>
           </div>
+
+          <FooterCol
+            title="Competitions"
+            items={[
+              ['All Competitions', '/competitions'],
+              ['Cars', '/competitions?category=cars'],
+              ['Cash', '/competitions?category=cash'],
+              ['Instant Wins', '/competitions?category=instant'],
+            ]}
+          />
+          <FooterCol
+            title="Company"
+            items={[
+              ['How It Works', '/how-it-works'],
+              ['Winners', '/winners'],
+              ['FAQ', '/faq'],
+              ['My Account', '/account'],
+            ]}
+          />
+          <FooterCol
+            title="Legal"
+            items={[
+              ['Terms & Conditions', '/terms'],
+              ['Privacy Policy', '/privacy'],
+              ['Acceptable Use', '/terms'],
+              ['Responsible Play', '/faq'],
+            ]}
+          />
         </div>
 
-        {/* Bottom Bar */}
-        <div className="border-t border-dark-800 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
-          <p>&copy; {currentYear} Sanches Coaching. All rights reserved.</p>
-          <div className="flex space-x-6 mt-4 md:mt-0">
-            <Link href="/privacy" className="hover:text-primary-500 transition-colors">
-              Privacy Policy
-            </Link>
-            <Link href="/terms" className="hover:text-primary-500 transition-colors">
-              Terms of Service
-            </Link>
-          </div>
+        <div className="mt-12 border-t border-white/10 pt-6 text-xs text-gray-500">
+          <p className="mb-2">
+            Prize Arena runs prize competitions in which entry requires the correct answer to a
+            skill-based question, in line with the Gambling Act 2005. You must be 18 or over and a UK
+            resident to enter. Please play responsibly.
+          </p>
+          <p>© {new Date().getFullYear()} Prize Arena Ltd. All rights reserved. This is a demonstration site.</p>
         </div>
       </div>
     </footer>
+  );
+}
+
+function FooterCol({ title, items }: { title: string; items: [string, string][] }) {
+  return (
+    <div>
+      <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-white">{title}</h4>
+      <ul className="space-y-2.5">
+        {items.map(([label, href]) => (
+          <li key={label}>
+            <Link href={href} className="text-sm text-gray-400 hover:text-primary-400">
+              {label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

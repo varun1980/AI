@@ -1,60 +1,71 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
       colors: {
+        // Brand gold — premium prizes
         primary: {
-          50: '#faf5f0',
-          100: '#f5ebe0',
-          200: '#e8d4b8',
-          300: '#d4a574',
-          400: '#c7954d',
-          500: '#b8832b',
-          600: '#9e6d1f',
-          700: '#7f561b',
-          800: '#6b461c',
-          900: '#5c3c1c',
+          50: '#fffbeb',
+          100: '#fef3c7',
+          200: '#fde68a',
+          300: '#fcd34d',
+          400: '#fbbf24',
+          500: '#f59e0b',
+          600: '#d97706',
+          700: '#b45309',
+          800: '#92400e',
+          900: '#78350f',
         },
-        dark: {
-          50: '#f6f6f6',
-          100: '#e7e7e7',
-          200: '#d1d1d1',
-          300: '#b0b0b0',
-          400: '#888888',
-          500: '#6d6d6d',
-          600: '#5d5d5d',
-          700: '#4f4f4f',
-          800: '#454545',
-          900: '#3d3d3d',
-          950: '#0a0a0a',
+        // Electric accent — "LIVE" energy / CTAs
+        accent: {
+          400: '#34d3ff',
+          500: '#06b6d4',
+          600: '#0891b2',
+        },
+        success: {
+          400: '#4ade80',
+          500: '#22c55e',
+          600: '#16a34a',
+        },
+        danger: {
+          500: '#ef4444',
+          600: '#dc2626',
+        },
+        ink: {
+          50: '#f6f7f9',
+          800: '#15161c',
+          850: '#101117',
+          900: '#0b0c11',
+          950: '#06070a',
         },
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-bebas)', 'Impact', 'sans-serif'],
+        display: ['var(--font-display)', 'Impact', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
         'slide-up': 'slideUp 0.5s ease-out',
-        'slide-down': 'slideDown 0.5s ease-out',
+        'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
+        shimmer: 'shimmer 2.5s linear infinite',
       },
       keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
+        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
         slideUp: {
           '0%': { transform: 'translateY(20px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
-        slideDown: {
-          '0%': { transform: 'translateY(-20px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
+        pulseGlow: {
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(34,197,94,0.5)' },
+          '50%': { boxShadow: '0 0 0 8px rgba(34,197,94,0)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-700px 0' },
+          '100%': { backgroundPosition: '700px 0' },
         },
       },
     },
